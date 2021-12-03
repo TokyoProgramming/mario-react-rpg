@@ -1,0 +1,4 @@
+
+
+1. screen movement
+2. character walk, run or jump
