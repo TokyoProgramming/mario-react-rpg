@@ -2,34 +2,70 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import groundGif from './img/ground.gif';
 import questionGif from './img/question.gif';
 import brickGif from './img/brick.gif';
+import question1 from './img/question1.gif';
+import question2 from './img/question2.gif';
+import question3 from './img/question3.gif';
 import marioGif from './img/mario.gif';
-// import marioWalk1 from './img/marioWalk1.gif';
-// import marioWalk2 from './img/marioWalk2.gif';
-// import marioWalk3 from './img/marioWalk3.gif';
+import marioWalk1Gif from './img/marioWalk1.gif';
+import marioWalk2Gif from './img/marioWalk2.gif';
+import marioWalk3Gif from './img/marioWalk3.gif';
+
+import marioMirrorGif from './img/mario_mirrored.gif';
+import marioWalk1MirrorGif from './img/marioWalk1_mirrored.gif';
+import marioWalk2MirrorGif from './img/marioWalk2_mirrored.gif';
+import marioWalk3MirrorGif from './img/marioWalk3_mirrored.gif';
+
+import largeHill from './img/hillLarge.gif';
+import smallHill from './img/hillSmall.gif';
+import bushSingle from './img/bushSingle.gif';
+import bushDouble from './img/bushDouble.gif';
+import bushTriple from './img/bushTriple.gif';
+import cloudSingle from './img/cloudSingle.gif';
+import title from './img/superMarioTitle.png';
 
 // https://stackoverflow.com/questions/48130461/how-to-make-my-character-jump-with-gravity
 
 const Canvas = () => {
   const canvasRef = useRef(null);
   const requestRef = useRef();
-
-  const jumpRef = useRef(false);
-  const jumpHeightRef = useRef(0);
-  const moveRef = useRef('');
-  const loadingRef = useRef(false);
   const STARTMARIO = { x: 150, y: 300 };
+  const iRef = useRef(0);
+  const marioWalkRef = useRef({
+    direction: '',
+    condition: 0,
+  });
+
   const [mario, setMario] = useState({
     x: STARTMARIO.x,
     y: STARTMARIO.y,
-    dx: 0.4,
-    dy: 0.1,
-    moveSpeed: 4,
-    jump: 100,
-    gravity: 0.8,
+    dx: 0,
+    dy: 0,
+    moveSpeed: 1.5,
+    jump: 8,
+    gravity: 2,
     source: marioGif,
   });
-  const marioXRef = useRef(STARTMARIO.x);
-  const marioYRef = useRef(STARTMARIO.y);
+
+  const playerRef = useRef({
+    marioX: STARTMARIO.x,
+    marioY: STARTMARIO.y,
+    dx: 0,
+    dy: 0,
+    moveLeft: false,
+    moveRight: false,
+    moveDown: false,
+    moveAny: false,
+    jump: false,
+    jumpHeight: 0,
+  });
+
+  const world = {
+    gravity: 0.2, // strength per frame of gravity
+    drag: 0.999, // play with this value to change drag
+    groundDrag: 0.9, // play with this value to change ground movement
+    ground: 150,
+  };
+
   const map = {
     cols: 16,
     rows: 16,
@@ -41,13 +77,13 @@ const Canvas = () => {
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 3, 2, 2, 2, 2, 0, 
-      0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 2, 3, 2, 3, 2, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
       1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -62,126 +98,186 @@ const Canvas = () => {
   const TILE_SIZE = 32;
   const SIZE_WIDTH = 25;
   const SIZE_HEIGHT = 30;
+  const GROUND = 380;
 
   const draw = (ctx) => {
     const mario1 = new Image();
     mario1.src = marioGif;
+
+    const marioWalk1 = new Image();
+    marioWalk1.src = marioWalk1Gif;
+    const marioWalk2 = new Image();
+    marioWalk2.src = marioWalk2Gif;
+    const marioWalk3 = new Image();
+    marioWalk3.src = marioWalk3Gif;
+
+    const marioWalk = [marioWalk1, marioWalk2, marioWalk3];
+
+    let marioCurrent;
+    if (playerRef.current.moveRight !== true) {
+      marioCurrent = mario1;
+    } else {
+      marioCurrent = marioWalk[marioWalkRef.current];
+    }
+
     ctx.drawImage(
-      mario1,
-      marioXRef.current,
-      marioYRef.current,
+      marioCurrent,
+      playerRef.current.marioX,
+      playerRef.current.marioY,
       SIZE_WIDTH,
       SIZE_HEIGHT
     );
   };
 
-  const getMapCoordinatesFromPosition = (x, y, direction) => {
-    if (direction === 'right' || direction === 'left') {
-      const colTile = Math.floor(Math.floor(x) / TILE_SIZE);
-      const rowTile1 = Math.floor((Math.floor(y) + SIZE_HEIGHT) / TILE_SIZE);
-      const rowTile2 = Math.floor(Math.floor(y) / TILE_SIZE);
-      const res1 = map.getTile(colTile, rowTile1);
-      const res2 = map.getTile(colTile, rowTile2);
-      if (x + 3 > WIDTH || x <= 0) return 2;
-      if (res1 === 0 && res2 === 0) return 1;
-      return 2;
-    } else if (direction === 'up') {
-      const colTile1 = Math.floor((x + SIZE_WIDTH) / TILE_SIZE);
-      const colTile2 = Math.floor(x / TILE_SIZE);
-      const rowTile = Math.floor(y / TILE_SIZE);
-      const res1 = map.getTile(colTile1, rowTile);
-      const res2 = map.getTile(colTile2, rowTile);
+  const getMapPosition = (x, y, direction) => {
+    const colTileLeft = Math.floor(x / TILE_SIZE);
+    const colTileRight = Math.floor((x + SIZE_WIDTH) / TILE_SIZE);
+    const rowTileUp = Math.floor(y / TILE_SIZE);
+    const rowTileBottom = Math.floor((y + SIZE_HEIGHT) / TILE_SIZE);
 
-      if (y + 3 > HEIGHT || y < 0) return false;
-      if (res1 !== 0 || res2 !== 0) return false;
-    } else {
-      const colTile1 = Math.floor((x + SIZE_WIDTH) / TILE_SIZE);
-      const colTile2 = Math.floor(x / TILE_SIZE);
-      const rowTile = Math.floor(y / TILE_SIZE);
-      const res1 = map.getTile(colTile1, rowTile);
-      const res2 = map.getTile(colTile2, rowTile);
-      if (y + 3 > HEIGHT || y < 0) return 2;
-      if (res1 === 0 && res2 === 0) return 1;
-      return 2;
+    const leftUp = map.getTile(colTileLeft, rowTileUp);
+    const leftBottom = map.getTile(colTileLeft, rowTileBottom);
+    const rightUp = map.getTile(colTileRight, rowTileUp);
+    const rightBottom = map.getTile(colTileRight, rowTileBottom);
+
+    switch (direction) {
+      case 'right':
+        if (x + SIZE_WIDTH + mario.moveSpeed > WIDTH) return 2;
+        if (rightUp === 0 && rightBottom === 0) return 1;
+        return 2;
+      case 'left':
+        if (x <= 0) return 2;
+        if (leftUp === 0 && leftBottom === 0) return 1;
+        return 2;
+      case 'up':
+        if (y + mario.jump > HEIGHT) return false;
+        if (rightUp !== 0 || leftUp !== 0) {
+          // if (rightUp === 3 || leftUp === 3) return 3;
+          return false;
+        }
+        return true;
+      case 'down':
+      case 'gravity':
+        if (y < 0) return 2;
+        if (rightBottom === 0 && leftBottom === 0) return 1;
+        return 2;
+      default:
+        break;
+    }
+  };
+
+  const collision = () => {
+    const rightCollision = getMapPosition(
+      playerRef.current.marioX + 5,
+      playerRef.current.marioY,
+      'right'
+    );
+    if (rightCollision !== 1) {
+      console.log('right collision');
+    }
+    const leftCollision = getMapPosition(
+      playerRef.current.marioX - 5,
+      playerRef.current.marioY,
+      'left'
+    );
+    if (leftCollision !== 1) {
+      console.log('left collision');
+    }
+    const topCollision = getMapPosition(
+      playerRef.current.marioX,
+      playerRef.current.marioY - 5,
+      'up'
+    );
+    if (topCollision === 3) {
+      console.log('question Box');
+    }
+
+    const bottomCollision = getMapPosition(
+      playerRef.current.marioX,
+      playerRef.current.marioY + 5,
+      'down'
+    );
+    if (bottomCollision !== 1) {
+      // console.log('bottom collision');
     }
   };
 
   const gravity = () => {
-    const res = getMapCoordinatesFromPosition(
-      Math.floor(mario.x),
-      Math.floor(mario.y) + SIZE_HEIGHT + mario.gravity + 1,
+    // if (playerRef.current.jump === true) return;
+    if (playerRef.current.marioY + SIZE_HEIGHT > HEIGHT - TILE_SIZE * 2) return;
+
+    const res = getMapPosition(
+      Math.floor(playerRef.current.marioX),
+      Math.floor(playerRef.current.marioY) + mario.gravity + 1,
       'gravity'
     );
-    if (jumpRef.current === true) return;
-    if (marioYRef.current + SIZE_HEIGHT > HEIGHT - TILE_SIZE * 2 || res === 2)
-      return;
+    if (res === 2) return;
 
-    marioYRef.current = marioYRef.current + mario.gravity;
+    playerRef.current.marioY = playerRef.current.marioY + mario.gravity;
     setMario((prev) => ({
       ...prev,
-
       y: prev.y + mario.gravity,
     }));
   };
-  const jump = () => {
-    if (jumpRef.current === true) {
-      jumpHeightRef.current = jumpHeightRef.current + 1;
-      if (jumpHeightRef.current > mario.jump) {
-        jumpRef.current = false;
-        jumpHeightRef.current = 0;
-        return;
-      }
-      const res = getMapCoordinatesFromPosition(mario.x, mario.y - 1, 'up');
-      if (res === false) {
-        jumpRef.current = false;
-        jumpHeightRef.current = 0;
-        return;
-      }
-      marioYRef.current = marioYRef.current - 1;
 
+  const jump = () => {
+    if (playerRef.current.jump === true) {
+      let height = 0;
+      for (let i = 1; i < mario.jump; i++) {
+        const res = getMapPosition(
+          playerRef.current.marioX,
+          playerRef.current.marioY - i,
+          'up'
+        );
+        if (res === false) {
+          playerRef.current.jump = false;
+          return height;
+        }
+        height += 1;
+      }
+
+      playerRef.current.marioY = playerRef.current.marioY - height;
       setMario((prev) => ({
         ...prev,
-
-        y: prev.y - 1,
+        y: prev.y - height,
       }));
     }
   };
+
   const move = () => {
-    if (moveRef.current === 'right') {
-      moveRef.current = '';
-      const checkRight = getMapCoordinatesFromPosition(
-        mario.x + mario.dx + SIZE_WIDTH,
-        mario.y,
+    if (playerRef.current.moveRight === true) {
+      const checkRight = getMapPosition(
+        playerRef.current.marioX + mario.moveSpeed,
+        playerRef.current.marioY,
         'right'
       );
       if (checkRight !== 1) return setMario((prevState) => ({ ...prevState }));
-      marioXRef.current = marioXRef.current + mario.moveSpeed;
+      playerRef.current.marioX =
+        playerRef.current.marioX * world.drag + mario.moveSpeed;
       return setMario((prevState) => ({
         ...prevState,
-        x: prevState.x + mario.moveSpeed,
+        x: prevState.x * world.drag + mario.moveSpeed,
       }));
-    } else if (moveRef.current === 'left') {
-      moveRef.current = '';
-      const checkLeft = getMapCoordinatesFromPosition(
-        mario.x - mario.moveSpeed,
-        mario.y,
+    } else if (playerRef.current.moveLeft === true) {
+      const checkLeft = getMapPosition(
+        playerRef.current.marioX - mario.moveSpeed,
+        playerRef.current.marioY,
         'left'
       );
       if (checkLeft !== 1) return setMario((prevState) => ({ ...prevState }));
-      marioXRef.current = marioXRef.current - mario.moveSpeed;
+      playerRef.current.marioX = playerRef.current.marioX - mario.moveSpeed;
       return setMario((prevState) => ({
         ...prevState,
         x: prevState.x - mario.moveSpeed,
       }));
-    } else if (moveRef.current === 'down') {
-      moveRef.current = '';
-      const checkDown = getMapCoordinatesFromPosition(
-        mario.x,
-        mario.y + SIZE_HEIGHT + mario.moveSpeed,
+    } else if (playerRef.current.moveDown === true) {
+      const checkDown = getMapPosition(
+        playerRef.current.marioX,
+        playerRef.current.marioY + mario.moveSpeed,
         'down'
       );
       if (checkDown !== 1) return setMario((prevState) => ({ ...prevState }));
-      marioYRef.current = marioYRef.current + mario.moveSpeed;
+      playerRef.current.marioY = playerRef.current.marioY + mario.moveSpeed;
       return setMario((prevState) => ({
         ...prevState,
         y: prevState.y + mario.moveSpeed,
@@ -192,20 +288,25 @@ const Canvas = () => {
     gravity();
     jump();
     move();
+    collision();
   };
   const listener = useCallback((e) => {
     e.preventDefault();
+    const state = e.type === 'keydown';
+    if (state) {
+      playerRef.current.moveAny = true;
+    }
     switch (e.code) {
       case 'ArrowRight':
-        console.log('right');
-        return (moveRef.current = 'right');
+        return (playerRef.current.moveRight = state);
       case 'ArrowLeft':
-        return (moveRef.current = 'left');
+        return (playerRef.current.moveLeft = state);
       case 'ArrowUp':
-        console.log('up');
-        return (jumpRef.current = true);
+        // console.log(playerRef.current.jump);
+        // if (playerRef.current.jump === true) return;
+        return (playerRef.current.jump = state);
       case 'ArrowDown':
-        return (moveRef.current = 'down');
+        return (playerRef.current.moveDown = state);
       default:
         break;
     }
@@ -213,10 +314,22 @@ const Canvas = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
 
   const setBackGround = async (ctx) => {
-    loadingRef.current = true;
     const brick = new Image();
     const ground = new Image();
     const question = new Image();
+
+    const questionGif1 = new Image();
+    const questionGif2 = new Image();
+    const questionGif3 = new Image();
+
+    questionGif1.src = question1;
+    questionGif2.src = question2;
+    questionGif3.src = question3;
+    let questionGifArr = [questionGif3, questionGif3, questionGif3];
+    if (playerRef.current.moveLeft === false) {
+      questionGifArr = [questionGif1, questionGif2, questionGif3];
+    }
+
     brick.src = brickGif;
     ground.src = groundGif;
     question.src = questionGif;
@@ -224,9 +337,13 @@ const Canvas = () => {
     for (var c = 0; c < WORLD_TILES; c++) {
       for (var r = 0; r < WORLD_TILES; r++) {
         var tile = map.getTile(c, r);
+        let targetImg = arr[tile - 1];
+        if (tile === 3) {
+          targetImg = questionGifArr[iRef.current];
+        }
         if (tile !== 0) {
           ctx.drawImage(
-            arr[tile - 1],
+            targetImg,
             0,
             0,
             TILE_SIZE, // source width
@@ -239,39 +356,71 @@ const Canvas = () => {
         }
       }
     }
-    loadingRef.current = false;
   };
 
   const animate = () => {
     update();
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-
-    draw(ctx);
-    requestRef.current = requestAnimationFrame(animate);
-  };
-
-  useEffect(() => {
     const canvas = canvasRef.current;
     canvas.width = WIDTH;
     canvas.height = HEIGHT;
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = '#548CFF';
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
-    document.addEventListener('keydown', listener);
+    const hill_large = new Image();
+    const hill_small = new Image();
+    const cloud_single = new Image();
+    const bush_triple = new Image();
+    const marioTitle = new Image();
+
+    hill_large.src = largeHill;
+    hill_small.src = smallHill;
+    cloud_single.src = cloudSingle;
+    bush_triple.src = bushTriple;
+    marioTitle.src = title;
+
+    ctx.drawImage(marioTitle, 20, TILE_SIZE * 2, 380, 250);
+    ctx.drawImage(cloud_single, 450, TILE_SIZE * 2);
+    ctx.drawImage(hill_large, 20, GROUND);
+    ctx.drawImage(hill_small, 380, GROUND + TILE_SIZE);
+    ctx.drawImage(bush_triple, 250, GROUND + TILE_SIZE + 4);
+
+    draw(ctx);
     const getBackGround = async () => {
       await setBackGround(ctx);
     };
     getBackGround();
+
+    requestRef.current = requestAnimationFrame(animate);
+  };
+
+  useEffect(() => {
+    document.addEventListener('keydown', listener);
+    document.addEventListener('keyup', listener);
     requestRef.current = requestAnimationFrame(animate);
     return () => {
       cancelAnimationFrame(requestRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listener, update]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      iRef.current += iRef.current + 1;
+      marioWalkRef.current += marioWalkRef.current + 1;
+      if (iRef.current === 3) {
+        iRef.current = 0;
+      }
+      if (marioWalkRef.current > 2) {
+        marioWalkRef.current = 0;
+      }
+    }, 150);
+    return () => {
+      clearInterval(interval);
+    };
+  }, []);
   return (
     <>
-      {loadingRef.current ? <h1> loading...</h1> : <canvas ref={canvasRef} />}
+      <canvas ref={canvasRef} />
     </>
   );
 };
