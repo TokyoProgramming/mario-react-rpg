@@ -9,16 +9,17 @@ import marioGif from './img/mario.gif';
 import marioWalk1Gif from './img/marioWalk1.gif';
 import marioWalk2Gif from './img/marioWalk2.gif';
 import marioWalk3Gif from './img/marioWalk3.gif';
+import pipeGif from './img/Pipe.gif';
 
-import marioMirrorGif from './img/mario_mirrored.gif';
-import marioWalk1MirrorGif from './img/marioWalk1_mirrored.gif';
-import marioWalk2MirrorGif from './img/marioWalk2_mirrored.gif';
-import marioWalk3MirrorGif from './img/marioWalk3_mirrored.gif';
+// import marioMirrorGif from './img/mario_mirrored.gif';
+// import marioWalk1MirrorGif from './img/marioWalk1_mirrored.gif';
+// import marioWalk2MirrorGif from './img/marioWalk2_mirrored.gif';
+// import marioWalk3MirrorGif from './img/marioWalk3_mirrored.gif';
 
 import largeHill from './img/hillLarge.gif';
 import smallHill from './img/hillSmall.gif';
-import bushSingle from './img/bushSingle.gif';
-import bushDouble from './img/bushDouble.gif';
+// import bushSingle from './img/bushSingle.gif';
+// import bushDouble from './img/bushDouble.gif';
 import bushTriple from './img/bushTriple.gif';
 import cloudSingle from './img/cloudSingle.gif';
 import title from './img/superMarioTitle.png';
@@ -30,10 +31,7 @@ const Canvas = () => {
   const requestRef = useRef();
   const STARTMARIO = { x: 150, y: 300 };
   const iRef = useRef(0);
-  const marioWalkRef = useRef({
-    direction: '',
-    condition: 0,
-  });
+  const marioWalkRef = useRef(0);
 
   const [mario, setMario] = useState({
     x: STARTMARIO.x,
@@ -41,10 +39,13 @@ const Canvas = () => {
     dx: 0,
     dy: 0,
     moveSpeed: 1.5,
-    jump: 8,
-    gravity: 2,
+    jump: 20,
+    gravity: 1.5,
+    jumpPower: 6,
     source: marioGif,
   });
+
+  const viewport = {};
 
   const playerRef = useRef({
     marioX: STARTMARIO.x,
@@ -57,6 +58,8 @@ const Canvas = () => {
     moveAny: false,
     jump: false,
     jumpHeight: 0,
+    ground: false,
+    scene: 0,
   });
 
   const world = {
@@ -87,9 +90,34 @@ const Canvas = () => {
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
       1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+
     ],
+    // prettier-ignore
+    tilesArr: [
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 2, 3, 2, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  ],
     getTile: function (col, row) {
       return this.tiles[row * map.cols + col];
+    },
+    getTileByArr: function (col, row, scene = 0) {
+      let targetTile = this.tilesArr[row][col + scene];
+
+      return targetTile;
     },
   };
   const WIDTH = 512;
@@ -142,7 +170,9 @@ const Canvas = () => {
 
     switch (direction) {
       case 'right':
-        if (x + SIZE_WIDTH + mario.moveSpeed > WIDTH) return 2;
+        if (x + SIZE_WIDTH + mario.moveSpeed > WIDTH / 2) {
+          return 2;
+        }
         if (rightUp === 0 && rightBottom === 0) return 1;
         return 2;
       case 'left':
@@ -152,7 +182,6 @@ const Canvas = () => {
       case 'up':
         if (y + mario.jump > HEIGHT) return false;
         if (rightUp !== 0 || leftUp !== 0) {
-          // if (rightUp === 3 || leftUp === 3) return 3;
           return false;
         }
         return true;
@@ -203,7 +232,6 @@ const Canvas = () => {
   };
 
   const gravity = () => {
-    // if (playerRef.current.jump === true) return;
     if (playerRef.current.marioY + SIZE_HEIGHT > HEIGHT - TILE_SIZE * 2) return;
 
     const res = getMapPosition(
@@ -211,7 +239,10 @@ const Canvas = () => {
       Math.floor(playerRef.current.marioY) + mario.gravity + 1,
       'gravity'
     );
-    if (res === 2) return;
+    if (res === 2) return (playerRef.current.ground = true);
+    if (res !== 2) {
+      playerRef.current.ground = false;
+    }
 
     playerRef.current.marioY = playerRef.current.marioY + mario.gravity;
     setMario((prev) => ({
@@ -221,26 +252,27 @@ const Canvas = () => {
   };
 
   const jump = () => {
-    if (playerRef.current.jump === true) {
-      let height = 0;
-      for (let i = 1; i < mario.jump; i++) {
-        const res = getMapPosition(
-          playerRef.current.marioX,
-          playerRef.current.marioY - i,
-          'up'
-        );
-        if (res === false) {
-          playerRef.current.jump = false;
-          return height;
-        }
-        height += 1;
-      }
+    if (
+      playerRef.current.jump === true &&
+      playerRef.current.jumpHeight < mario.jump
+    ) {
+      const res = getMapPosition(
+        playerRef.current.marioX,
+        playerRef.current.marioY - mario.jumpPower,
+        'up'
+      );
 
-      playerRef.current.marioY = playerRef.current.marioY - height;
+      if (res === false) return (playerRef.current.jump = false);
+      playerRef.current.marioY = playerRef.current.marioY - mario.jumpPower;
       setMario((prev) => ({
         ...prev,
-        y: prev.y - height,
+        y: prev.y - mario.jumpPower,
       }));
+
+      playerRef.current.jumpHeight = playerRef.current.jumpHeight + 1;
+    } else if (playerRef.current.jumpHeight >= mario.jump) {
+      playerRef.current.jumpHeight = 0;
+      playerRef.current.jump = false;
     }
   };
 
@@ -285,8 +317,8 @@ const Canvas = () => {
     }
   };
   const update = () => {
-    gravity();
     jump();
+    gravity();
     move();
     collision();
   };
@@ -302,16 +334,19 @@ const Canvas = () => {
       case 'ArrowLeft':
         return (playerRef.current.moveLeft = state);
       case 'ArrowUp':
-        // console.log(playerRef.current.jump);
-        // if (playerRef.current.jump === true) return;
-        return (playerRef.current.jump = state);
+        if (
+          playerRef.current.ground === true &&
+          playerRef.current.jump === false
+        ) {
+          return (playerRef.current.jump = state);
+        }
+        return playerRef.current.jump;
       case 'ArrowDown':
         return (playerRef.current.moveDown = state);
       default:
         break;
     }
   }, []);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
 
   const setBackGround = async (ctx) => {
     const brick = new Image();
@@ -334,9 +369,11 @@ const Canvas = () => {
     ground.src = groundGif;
     question.src = questionGif;
     const arr = [ground, brick, question];
+
     for (var c = 0; c < WORLD_TILES; c++) {
       for (var r = 0; r < WORLD_TILES; r++) {
-        var tile = map.getTile(c, r);
+        var tile = map.getTileByArr(c, r, playerRef.current.scene);
+
         let targetImg = arr[tile - 1];
         if (tile === 3) {
           targetImg = questionGifArr[iRef.current];
@@ -378,18 +415,37 @@ const Canvas = () => {
     bush_triple.src = bushTriple;
     marioTitle.src = title;
 
-    ctx.drawImage(marioTitle, 20, TILE_SIZE * 2, 380, 250);
-    ctx.drawImage(cloud_single, 450, TILE_SIZE * 2);
-    ctx.drawImage(hill_large, 20, GROUND);
-    ctx.drawImage(hill_small, 380, GROUND + TILE_SIZE);
-    ctx.drawImage(bush_triple, 250, GROUND + TILE_SIZE + 4);
-
+    if (playerRef.current.marioX >= WIDTH / 2 - mario.moveSpeed) {
+      console.log('hi');
+    }
+    ctx.drawImage(
+      marioTitle,
+      20 - playerRef.current.scene * TILE_SIZE,
+      TILE_SIZE * 2,
+      380,
+      250
+    );
+    ctx.drawImage(
+      cloud_single,
+      450 - playerRef.current.scene * TILE_SIZE,
+      TILE_SIZE * 2
+    );
+    ctx.drawImage(hill_large, 20 - playerRef.current.scene * TILE_SIZE, GROUND);
+    ctx.drawImage(
+      hill_small,
+      380 - playerRef.current.scene * TILE_SIZE,
+      GROUND + TILE_SIZE
+    );
+    ctx.drawImage(
+      bush_triple,
+      250 - playerRef.current.scene * TILE_SIZE,
+      GROUND + TILE_SIZE + 4
+    );
     draw(ctx);
     const getBackGround = async () => {
       await setBackGround(ctx);
     };
     getBackGround();
-
     requestRef.current = requestAnimationFrame(animate);
   };
 
@@ -407,6 +463,7 @@ const Canvas = () => {
     const interval = setInterval(() => {
       iRef.current += iRef.current + 1;
       marioWalkRef.current += marioWalkRef.current + 1;
+
       if (iRef.current === 3) {
         iRef.current = 0;
       }
